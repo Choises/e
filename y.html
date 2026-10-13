@@ -359,38 +359,34 @@
 
     let mediaRecorder = null; let audioChunks = []; let mediaStream = null;
 
-                           function linkify(text) {
+                           // 📺 1. Η ΑΛΑΝΘΑΣΤΗ ΣΥΝΑΡΤΗΣΗ LINKIFY (Υποστηρίζει Κλασικά Βίντεο ΚΑΙ Shorts/Reels!)
+     // 📺 1. Η ΑΛΑΝΘΑΣΤΗ ΣΥΝΑΡΤΗΣΗ LINKIFY (Με σωστή απομόνωση του ID από το match[2])
+    function linkify(text) {
         var urlPattern = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
         return text.replace(urlPattern, function(url) {
             var u = url.toLowerCase();
             
-            // 1. Έλεγχος αν είναι εικόνα ή GIF
+            // Έλεγχος αν είναι εικόνα ή GIF
             if (u.includes('.jpg') || u.includes('.jpeg') || u.includes('.png') || u.includes('.gif') || u.includes('.webp')) {
                 return '<img src="' + url + '" style="max-width: 100%; max-height: 150px; border-radius: 8px; display: block; margin-top: 5px; border: 1px solid #333; cursor: pointer;" onclick="zoomImage(this.src)" alt="Εικόνα Chat" />';
             } 
             
-            // 2. 🔥 Ο ΑΛΑΝΘΑΣΤΟΣ ΕΛΕΓΧΟΣ YOUTUBE (Καθαρίζει live τα links)
+            // 🔥 Ο ΑΠΟΛΥΤΟΣ ΜΗΧΑΝΙΣΜΟΣ YOUTUBE: Ξεριζώνει το ID από Κλασικά Βίντεο, youtu.be και Shorts/Reels!
             var videoId = "";
-            try {
-                if (u.includes("youtube.com") || u.includes("youtu.be")) {
-                    // Φτιάχνουμε ένα προσωρινό URL αντικείμενο για να διαβάσουμε τις παραμέτρους
-                    var tempUrl = new URL(url);
-                    if (u.includes("youtu.be/")) {
-                        videoId = tempUrl.pathname.substring(1);
-                    } else {
-                        videoId = tempUrl.searchParams.get("v");
-                    }
-                    // Κόβουμε τυχόν ξένα στοιχεία για να κρατήσουμε ΜΟΝΟ τους 11 χαρακτήρες του ID
-                    if (videoId) { videoId = videoId.substring(0, 11); }
-                }
-            } catch(e) { videoId = ""; }
+            var regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+            var match = url.match(regExp);
             
-            // Αν το ID είναι σωστό, χτίζουμε το Box προεπισκόπησης
+            // 🔥 👉 ΔΙΟΡΘΩΣΗ: Το καθαρό 11ψήφιο ID βρίσκεται πάντα στη θέση match[2] του πίνακα!
+            if (match && match[2] && match[2].length === 11) {
+                videoId = match[2];
+            }
+            
+            // Αν το ID απομονώθηκε σωστά, χτίζουμε το Box προεπισκόπησης
             if (videoId && videoId.length === 11) {
                 var uniqueId = 'yt_' + Math.random().toString(36).substr(2, 9);
                 var thumbUrl = "https://img.youtube.com/vi/" + videoId + "/hqdefault.jpg";
                 
-                return '<div class="yt-preview-box" id="' + uniqueId + '" style="margin-top: 8px; position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0, 255, 204, 0.4); box-shadow: 0 0 10px rgba(0, 255, 204, 0.2); cursor: pointer; max-width: 100%; width: 100%; aspect-ratio: 16/9;" onclick="embedYoutubeVideo(\'' + videoId + '\', \'' + uniqueId + '\')">' +
+                return '<div class="yt-preview-box" id="' + uniqueId + '" style="margin-top: 8px; position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(0, 255, 204, 0.4); box-shadow: 0 0 10px rgba(0, 255, 204, 0.2); cursor: pointer; max-width: 100%; width: 100%px; aspect-ratio: 16/9;" onclick="embedYoutubeVideo(\'' + videoId + '\', \'' + uniqueId + '\')">' +
                             '<!-- Η επίσημη φωτογραφία προεπισκόπησης -->' +
                             '<img src="' + thumbUrl + '" style="width: 100%; height: 100%; display: block; object-fit: cover;">' +
                             '<!-- Το Neon Play κουμπί -->' +
@@ -400,17 +396,20 @@
                         '</div>';
             }
 
-            // 3. Αν είναι απλό link ιστοσελίδας
+            // Αν είναι απλό link ιστοσελίδας
             return '<a href="' + url + '" target="_blank" style="color: #00ffcc; text-decoration: underline; font-weight: bold;">' + url + '</a>';
         });
     }
 
-    // 🎬 Η ΣΥΝΑΡΤΗΣΗ ΠΟΥ ΑΝΤΙΚΑΘΙΣΤΑ ΤΗΝ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΜΕ ΤΟ LIVE ΒΙΝΤΕΟ
+    // 🎬 2. Η ΣΥΝΑΡΤΗΣΗ ΠΟΥ ΑΝΤΙΚΑΘΙΣΤΑ ΤΗΝ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΜΕ ΤΟ LIVE ΒΙΝΤΕΟ
     function embedYoutubeVideo(vId, elementId) {
         var previewBox = document.getElementById(elementId);
         if (previewBox) {
+            // Κατασκευάζουμε το σωστό URL για αναπαραγωγή
             var iframeUrl = "https://www.youtube.com/embed/" + vId + "?autoplay=1&playsinline=1";
+            
             previewBox.innerHTML = '<iframe src="' + iframeUrl + '" style="width: 100%; height: 100%; border: none; display: block;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>';
+            
             previewBox.style.cursor = "default";
             previewBox.removeAttribute("onclick");
         }
